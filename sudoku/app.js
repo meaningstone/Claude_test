@@ -18,6 +18,7 @@
     best: $('#best'),
     msg: $('#msg'),
     theme: $('#themeBtn'),
+    memoBtn: $('#memoBtn'),
     newBtn: $('#newBtn'),
     hintBtn: $('#hintBtn'),
     checkBtn: $('#checkBtn'),
@@ -42,6 +43,7 @@
   };
 
   let g;                                   // 현재 게임 상태
+  let memo = false;                        // 메모 모드
   let timerId = null;
   let bestRecords = store.get('sudoku-best', {}); // { [level]: { score, time } }
 
@@ -88,6 +90,26 @@
 
   function say(text) { el.msg.textContent = text; }
 
+  // 메모 비트마스크(1<<n)를 3x3 작은 숫자로 그린다
+  function renderNotes(cell, mask) {
+    const box = document.createElement('span');
+    box.className = 'notes';
+    for (let n = 1; n <= 9; n++) {
+      const s = document.createElement('span');
+      s.textContent = mask & (1 << n) ? n : '';
+      box.appendChild(s);
+    }
+    cell.textContent = '';
+    cell.appendChild(box);
+  }
+
+  // 숫자를 확정하면 같은 행/열/박스 칸의 해당 메모를 지운다
+  function clearPeerNotes(i, v) {
+    for (let k = 0; k < 81; k++) {
+      if (k !== i && isPeer(k, i)) g.notes[k] &= ~(1 << v);
+    }
+  }
+
   /* ---------- 렌더링 ---------- */
   function render() {
     const sel = g.sel;
@@ -95,7 +117,9 @@
 
     cells.forEach((c, i) => {
       const v = g.board[i];
-      c.textContent = v || '';
+      if (v) c.textContent = v;
+      else if (g.notes[i]) renderNotes(c, g.notes[i]);
+      else c.textContent = '';
       c.classList.toggle('given', g.given[i]);
       c.classList.toggle('wrong', v !== 0 && v !== g.solution[i]);
       c.classList.toggle('hint', g.mark[i] === 1);
@@ -117,6 +141,10 @@
     });
     el.pad.querySelector('[data-n="0"]').disabled = !playing();
 
+    el.memoBtn.classList.toggle('active', memo);
+    el.memoBtn.setAttribute('aria-pressed', memo);
+    el.memoBtn.textContent = memo ? '✏️ 메모 ON' : '✏️ 메모 OFF';
+    el.memoBtn.disabled = !playing();
     el.hintBtn.disabled = !playing();
     el.checkBtn.disabled = !playing();
     el.revealBtn.disabled = !(g.status === 'playing' || g.status === 'lost');
@@ -153,6 +181,7 @@
       board: puzzle.slice(),
       given: puzzle.map((v) => v !== 0),
       mark: new Array(81).fill(0), // 1: 힌트, 2: 정답 보기
+      notes: new Array(81).fill(0), // 칸별 메모 비트마스크
       mistakes: 0,
       hints: 0,
       moves: 0,
@@ -231,14 +260,22 @@
 
   function enter(v) {
     const i = g.sel;
-    if (!playing() || i < 0 || locked(i) || g.board[i] === v) return;
+    if (!playing() || i < 0 || locked(i)) return;
+    if (memo) { // 메모는 판정 없이 표시만 토글 (실수로 세지 않음)
+      if (g.board[i] !== 0) return;
+      g.notes[i] ^= 1 << v;
+      return render();
+    }
+    if (g.board[i] === v) return;
     g.board[i] = v;
+    g.notes[i] = 0;
     g.moves++;
     if (v !== g.solution[i]) {
       g.mistakes++;
       say(`틀렸어요! (${g.mistakes}/${MAX_MISTAKES})`);
       if (g.mistakes >= MAX_MISTAKES) return end('lost');
     } else {
+      clearPeerNotes(i, v);
       say('');
     }
     render();
@@ -247,8 +284,10 @@
 
   function erase() {
     const i = g.sel;
-    if (!playing() || i < 0 || locked(i) || g.board[i] === 0) return;
-    g.board[i] = 0;
+    if (!playing() || i < 0 || locked(i)) return;
+    if (g.board[i] !== 0) g.board[i] = 0;
+    else if (g.notes[i]) g.notes[i] = 0;
+    else return;
     say('');
     render();
   }
@@ -263,6 +302,8 @@
       i = open[Math.floor(Math.random() * open.length)];
     }
     g.board[i] = g.solution[i];
+    g.notes[i] = 0;
+    clearPeerNotes(i, g.solution[i]);
     g.mark[i] = 1;
     g.hints++;
     g.moves++;
@@ -318,6 +359,9 @@
     if (n === 0) erase(); else enter(n);
   });
 
+  const toggleMemo = () => { memo = !memo; render(); };
+  el.memoBtn.addEventListener('click', toggleMemo);
+
   el.newBtn.addEventListener('click', () => { if (confirmLeave()) newGame(g.level); });
   el.hintBtn.addEventListener('click', hint);
   el.checkBtn.addEventListener('click', check);
@@ -327,6 +371,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (el.dialog.open || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'KeyN' && playing()) return toggleMemo();
     if (/^[1-9]$/.test(e.key)) return enter(Number(e.key));
     if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') return erase();
 
