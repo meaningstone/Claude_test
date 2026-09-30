@@ -1,0 +1,25 @@
+# Build output
+build/
+out/
+cmake-build-*/
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Binaries / objects
+*.o
+*.obj
+*.exe
+*.a
+*.lib
+*.dll
+*.so
+*.pdb
+
+# IDE
+.vs/
+.vscode/
+.idea/

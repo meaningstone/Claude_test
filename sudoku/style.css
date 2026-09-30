@@ -1,0 +1,290 @@
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --line: #cbd5e1;
+  --line-strong: #334155;
+  --accent: #3b6cf6;
+  --accent-text: #ffffff;
+  --sel: #bcd0ff;
+  --same: #d6e2ff;
+  --peer: #eef2fb;
+  --given: #111827;
+  --user: #2563eb;
+  --hint: #059669;
+  --reveal: #d97706;
+  --wrong: #dc2626;
+  --wrong-bg: #fee2e2;
+  --shadow: 0 4px 16px rgba(30, 41, 59, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f141d;
+  --card: #182030;
+  --text: #e5e9f2;
+  --muted: #93a0b8;
+  --line: #33405a;
+  --line-strong: #8fa3c7;
+  --accent: #6c8dff;
+  --accent-text: #0f141d;
+  --sel: #2f4587;
+  --same: #283a6b;
+  --peer: #1f2a42;
+  --given: #f1f5ff;
+  --user: #7fa2ff;
+  --hint: #4ade80;
+  --reveal: #fbbf24;
+  --wrong: #ff7b7b;
+  --wrong-bg: #4a2028;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 상단: 제목 + 다크모드 토글(우측 상단) */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 1.2rem;
+  line-height: 1;
+  box-shadow: var(--shadow);
+}
+
+/* 난이도 */
+.levels {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.levels button {
+  flex: 1;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.levels button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* 실수 / 타이머 / 최고점수 */
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.stat .label {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.stat strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat.timer strong { font-size: 1.5rem; }
+.stat.danger strong { color: var(--wrong); }
+
+/* 판 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--card);
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.cell {
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  font-size: clamp(1.1rem, 5.2vw, 1.8rem);
+  color: var(--user);
+}
+
+.cell.bx { border-right: 2px solid var(--line-strong); }
+.cell.by { border-bottom: 2px solid var(--line-strong); }
+.cell:nth-child(9n) { border-right: 0; }
+.cell:nth-child(n + 73) { border-bottom: 0; }
+
+.cell.peer { background: var(--peer); }
+.cell.same { background: var(--same); }
+.cell.selected { background: var(--sel); }
+
+.cell.given { color: var(--given); font-weight: 700; }
+.cell.hint { color: var(--hint); }
+.cell.reveal { color: var(--reveal); }
+.cell.wrong { color: var(--wrong); background: var(--wrong-bg); }
+.cell.flash { animation: shake 0.5s; }
+
+.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* 숫자 패드 */
+.pad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.pad button {
+  position: relative;
+  padding: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--user);
+}
+
+.pad button small {
+  position: absolute;
+  right: 6px;
+  bottom: 3px;
+  font-size: 0.62rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.pad button:disabled { opacity: 0.3; cursor: default; }
+
+/* 동작 버튼 */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.actions button,
+.dialog-actions button {
+  padding: 11px 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+button:disabled { opacity: 0.4; cursor: default; }
+
+.msg {
+  min-height: 1.4em;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* 결과 모달 */
+dialog {
+  width: min(90vw, 340px);
+  padding: 24px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+
+dialog h2 { margin: 0 0 14px; text-align: center; }
+
+#dBody dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+#dBody dt { color: var(--muted); }
+#dBody dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+#dBody dd.big { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+#dBody p { margin: 0; text-align: center; color: var(--muted); }
+#dBody .record { margin-top: 12px; text-align: center; font-weight: 700; color: var(--hint); }
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 20px;
+}

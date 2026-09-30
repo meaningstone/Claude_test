@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>스도쿠</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>스도쿠</h1>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="다크 모드 전환" title="다크 모드 전환">🌙</button>
+    </header>
+
+    <nav id="levels" class="levels" aria-label="난이도">
+      <button type="button" data-level="0">쉬움</button>
+      <button type="button" data-level="1">보통</button>
+      <button type="button" data-level="2">어려움</button>
+      <button type="button" data-level="3">전문가</button>
+      <button type="button" data-level="4">지옥</button>
+    </nav>
+
+    <section class="stats">
+      <div class="stat"><span class="label">실수</span><strong id="mistakes">0 / 3</strong></div>
+      <div class="stat timer"><span class="label">시간</span><strong id="timer">00:00</strong></div>
+      <div class="stat"><span class="label">최고점수</span><strong id="best">-</strong></div>
+    </section>
+
+    <div id="board" class="board" role="grid" aria-label="스도쿠 판"></div>
+
+    <div id="pad" class="pad">
+      <button type="button" data-n="1"><span>1</span><small></small></button>
+      <button type="button" data-n="2"><span>2</span><small></small></button>
+      <button type="button" data-n="3"><span>3</span><small></small></button>
+      <button type="button" data-n="4"><span>4</span><small></small></button>
+      <button type="button" data-n="5"><span>5</span><small></small></button>
+      <button type="button" data-n="6"><span>6</span><small></small></button>
+      <button type="button" data-n="7"><span>7</span><small></small></button>
+      <button type="button" data-n="8"><span>8</span><small></small></button>
+      <button type="button" data-n="9"><span>9</span><small></small></button>
+      <button type="button" data-n="0" aria-label="지우기"><span>⌫</span></button>
+    </div>
+
+    <div class="actions">
+      <button id="newBtn" class="primary" type="button">새 게임</button>
+      <button id="hintBtn" type="button">힌트</button>
+      <button id="checkBtn" type="button">정답 체크</button>
+      <button id="revealBtn" type="button">정답 보기</button>
+    </div>
+
+    <p id="msg" class="msg" role="status"></p>
+  </main>
+
+  <dialog id="dialog">
+    <h2 id="dTitle"></h2>
+    <div id="dBody"></div>
+    <div class="dialog-actions">
+      <button id="dNew" class="primary" type="button">새 게임</button>
+      <button id="dClose" type="button">닫기</button>
+    </div>
+  </dialog>
+
+  <script src="sudoku.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
