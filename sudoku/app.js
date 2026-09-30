@@ -28,6 +28,17 @@
     dBody: $('#dBody'),
     dNew: $('#dNew'),
     dClose: $('#dClose'),
+    nickBtn: $('#nickBtn'),
+    nickText: $('#nickText'),
+    boardBtn: $('#boardBtn'),
+    nickDialog: $('#nickDialog'),
+    nickForm: $('#nickForm'),
+    nickInput: $('#nickInput'),
+    nickCancel: $('#nickCancel'),
+    boardDialog: $('#boardDialog'),
+    boardTabs: $('#boardTabs'),
+    boardList: $('#boardList'),
+    boardClose: $('#boardClose'),
   };
 
   const store = {
@@ -46,6 +57,15 @@
   let memo = false;                        // 메모 모드
   let timerId = null;
   let bestRecords = store.get('sudoku-best', {}); // { [level]: { score, time } }
+  let nick = store.get('sudoku-nick', '');
+  let records = store.get('sudoku-board', []);    // [{ id, nick, score, time, level, date }]
+  let boardFilter = -1;                           // 순위표 탭: -1 전체, 0~4 난이도
+  let lastRecordId = null;                        // 방금 등록한 기록(강조용)
+  let nickRequired = false;                       // 첫 접속 닉네임 입력 중인지
+  let startLevel = 0;
+
+  const MAX_PER_LEVEL = 30;
+  const NICK_MAX = 12;
 
   /* ---------- 테마 ---------- */
   function applyTheme(theme) {
@@ -89,6 +109,91 @@
   }
 
   function say(text) { el.msg.textContent = text; }
+
+  /* ---------- 닉네임 / 순위표 ---------- */
+  const cleanNick = (s) => s.replace(/\s+/g, ' ').trim().slice(0, NICK_MAX);
+
+  function setNick(name) {
+    nick = name;
+    store.set('sudoku-nick', nick);
+    el.nickText.textContent = nick || '닉네임';
+  }
+
+  function openNick(required) {
+    nickRequired = required;
+    el.nickCancel.hidden = required;
+    el.nickInput.value = nick;
+    el.nickDialog.showModal();
+    el.nickInput.select();
+  }
+
+  const compareRecords = (a, b) => b.score - a.score || a.time - b.time || a.date - b.date;
+
+  function addRecord(entry) {
+    records.push(entry);
+    const kept = [];
+    for (let l = 0; l < LEVEL_NAMES.length; l++) {
+      kept.push(...records.filter((r) => r.level === l).sort(compareRecords).slice(0, MAX_PER_LEVEL));
+    }
+    records = kept;
+    store.set('sudoku-board', records);
+    return records.filter((r) => r.level === entry.level).sort(compareRecords).findIndex((r) => r.id === entry.id) + 1;
+  }
+
+  const formatDate = (ts) => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  function renderBoard() {
+    el.boardTabs.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', Number(b.dataset.level) === boardFilter);
+    });
+
+    const rows = records.filter((r) => boardFilter < 0 || r.level === boardFilter).sort(compareRecords);
+    el.boardList.textContent = '';
+    if (!rows.length) {
+      const p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = '아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!';
+      el.boardList.appendChild(p);
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'lb';
+    const head = table.createTHead().insertRow();
+    for (const h of ['순위', '닉네임', '점수', '난이도', '시간', '날짜']) {
+      const th = document.createElement('th');
+      th.textContent = h;
+      head.appendChild(th);
+    }
+    const body = table.createTBody();
+    rows.forEach((r, i) => {
+      const tr = body.insertRow();
+      tr.classList.toggle('me', r.id === lastRecordId);
+      const cols = [
+        [i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1, ''],
+        [r.nick, 'name'],
+        [r.score.toLocaleString(), 'score'],
+        [LEVEL_NAMES[r.level], ''],
+        [formatTime(r.time), ''],
+        [formatDate(r.date), ''],
+      ];
+      for (const [text, cls] of cols) {
+        const td = tr.insertCell();
+        td.textContent = text;
+        if (cls) td.className = cls;
+      }
+    });
+    el.boardList.appendChild(table);
+  }
+
+  function openBoard(filter = boardFilter) {
+    boardFilter = filter;
+    renderBoard();
+    el.boardDialog.showModal();
+  }
 
   // 메모 비트마스크(1<<n)를 3x3 작은 숫자로 그린다
   function renderNotes(cell, mask) {
@@ -214,19 +319,74 @@
         store.set('sudoku-best', bestRecords);
         render();
       }
-      showDialog('🎉 클리어!', [
+      showDialog('🎉 축하합니다!', [
         ['난이도', LEVEL_NAMES[g.level]],
         ['걸린 시간', formatTime(g.seconds)],
         ['실수', `${g.mistakes}회`],
         ['힌트', `${g.hints}회`],
         ['점수', score.toLocaleString(), 'big'],
-      ], isRecord ? '🏆 최고 점수 갱신!' : `최고 점수 ${prev.score.toLocaleString()}점 (${formatTime(prev.time)})`);
+      ], isRecord ? '🏆 최고 점수 갱신!' : `최고 점수 ${prev.score.toLocaleString()}점 (${formatTime(prev.time)})`,
+      buildRegisterForm({ score, time: g.seconds, level: g.level }));
+      confetti();
     } else {
       showDialog('게임 종료', null, `실수가 ${MAX_MISTAKES}회가 되었어요. 다시 도전해 보세요!`);
     }
   }
 
-  function showDialog(title, rows, footer) {
+  // 클리어 화면의 닉네임 입력 + 순위표 등록
+  function buildRegisterForm({ score, time, level }) {
+    const box = document.createElement('div');
+    box.className = 'register';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = NICK_MAX;
+    input.placeholder = '닉네임';
+    input.value = nick;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '순위표에 등록';
+    btn.addEventListener('click', () => {
+      const name = cleanNick(input.value);
+      if (!name) return input.focus();
+      setNick(name);
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const rank = addRecord({ id, nick: name, score, time, level, date: Date.now() });
+      lastRecordId = id;
+
+      const done = document.createElement('p');
+      done.className = 'done';
+      done.textContent = `등록 완료! ${LEVEL_NAMES[level]} ${rank}위`;
+      const view = document.createElement('button');
+      view.type = 'button';
+      view.textContent = '순위표 보기';
+      view.addEventListener('click', () => { el.dialog.close(); openBoard(level); });
+      box.replaceChildren(done, view);
+    });
+
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
+    box.append(input, btn);
+    return box;
+  }
+
+  function confetti() {
+    const colors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa'];
+    const wrap = document.createElement('div');
+    wrap.className = 'confetti';
+    for (let i = 0; i < 40; i++) {
+      const piece = document.createElement('i');
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = `${Math.random() * 0.8}s`;
+      piece.style.animationDuration = `${1.8 + Math.random() * 1.6}s`;
+      wrap.appendChild(piece);
+    }
+    el.dialog.appendChild(wrap);
+  }
+
+  function showDialog(title, rows, footer, extra) {
+    el.dialog.querySelector('.confetti')?.remove();
     el.dTitle.textContent = title;
     el.dBody.textContent = '';
     if (rows) {
@@ -249,6 +409,7 @@
       p.textContent = footer;
       el.dBody.appendChild(p);
     }
+    if (extra) el.dBody.appendChild(extra);
     el.dialog.showModal();
   }
 
@@ -369,8 +530,29 @@
   el.dNew.addEventListener('click', () => { el.dialog.close(); newGame(g.level); });
   el.dClose.addEventListener('click', () => el.dialog.close());
 
+  el.nickBtn.addEventListener('click', () => openNick(false));
+  el.boardBtn.addEventListener('click', () => openBoard());
+  el.boardClose.addEventListener('click', () => el.boardDialog.close());
+  el.boardTabs.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-level]');
+    if (b) { boardFilter = Number(b.dataset.level); renderBoard(); }
+  });
+  el.nickCancel.addEventListener('click', () => el.nickDialog.close());
+  el.nickDialog.addEventListener('cancel', (e) => { if (nickRequired) e.preventDefault(); }); // 첫 입력은 Esc로 닫기 불가
+  el.nickForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = cleanNick(el.nickInput.value);
+    if (!name) return;
+    setNick(name);
+    el.nickDialog.close();
+    if (nickRequired) {
+      nickRequired = false;
+      newGame(startLevel);
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (el.dialog.open || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === 'KeyN' && playing()) return toggleMemo();
     if (/^[1-9]$/.test(e.key)) return enter(Number(e.key));
     if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') return erase();
@@ -387,5 +569,8 @@
   /* ---------- 시작 ---------- */
   const savedTheme = store.get('sudoku-theme', null);
   applyTheme(savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  newGame(Math.min(4, Math.max(0, Number(store.get('sudoku-level', 0)) || 0)));
+  startLevel = Math.min(4, Math.max(0, Number(store.get('sudoku-level', 0)) || 0));
+  setNick(nick);
+  if (nick) newGame(startLevel);
+  else openNick(true); // 첫 접속: 닉네임을 입력한 뒤 게임 시작
 })();

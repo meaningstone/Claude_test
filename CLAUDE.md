@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Minimal C++17 + CMake skeleton: a single executable target (`claude_test`) built from `src/main.cpp`, which only prints `hello, world!`. There are no tests, linter, or formatter configured yet.
 
-`sudoku/` is a separate, dependency-free browser game (open `sudoku/index.html`): `sudoku.js` = engine (solver/generator, no DOM), `app.js` = UI/state/scoring, `style.css` = themes. Engine can be checked with `node -e "require('./sudoku/sudoku.js')"`.
+`sudoku/` is a separate, dependency-free browser game (open `sudoku/index.html`): `sudoku.js` = engine (solver/generator, no DOM), `app.js` = UI/state/scoring, `style.css` = themes. Nickname, best scores and the leaderboard are stored in per-browser `localStorage` (no server, so rankings are not shared between players). Engine can be checked with `node -e "require('./sudoku/sudoku.js')"`.
 
 ## Commands
 

@@ -77,6 +77,27 @@ button {
   letter-spacing: 0.04em;
 }
 
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  max-width: 130px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow);
+}
+
 .icon-btn {
   width: 42px;
   height: 42px;
@@ -321,3 +342,62 @@ dialog h2 { margin: 0 0 14px; text-align: center; }
   gap: 8px;
   margin-top: 20px;
 }
+
+.dialog-actions.single { grid-template-columns: 1fr; }
+
+dialog { position: fixed; overflow: hidden; }
+dialog.wide { width: min(94vw, 460px); }
+dialog .sub { margin: 0 0 12px; text-align: center; font-size: 0.85rem; color: var(--muted); }
+
+dialog input[type="text"] {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+dialog input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* 등록 폼 (클리어 화면) */
+.register { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.register button {
+  padding: 11px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.register .done { margin: 0; text-align: center; font-weight: 700; color: var(--hint); }
+.register .done + button { background: var(--card); color: var(--text); border-color: var(--line); }
+
+/* 축하 색종이 */
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti i {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 12px;
+  opacity: 0.95;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  to { transform: translateY(640px) rotate(600deg); opacity: 0; }
+}
+
+/* 순위표 */
+#boardTabs { margin-bottom: 12px; }
+.board-list { max-height: 50vh; overflow: auto; margin-bottom: 10px; }
+
+.lb { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.lb th { padding: 6px 4px; color: var(--muted); font-weight: 600; text-align: center; border-bottom: 1px solid var(--line); }
+.lb td { padding: 8px 4px; text-align: center; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.lb td.name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lb td.score { font-weight: 700; color: var(--accent); }
+.lb tr.me td { background: var(--same); }
+.lb .empty { padding: 28px 0; text-align: center; color: var(--muted); }

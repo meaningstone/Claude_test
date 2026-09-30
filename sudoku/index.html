@@ -10,7 +10,11 @@
   <main class="app">
     <header class="top">
       <h1>스도쿠</h1>
-      <button id="themeBtn" class="icon-btn" type="button" aria-label="다크 모드 전환" title="다크 모드 전환">🌙</button>
+      <div class="top-right">
+        <button id="nickBtn" class="chip" type="button" title="닉네임 변경">👤 <span id="nickText"></span></button>
+        <button id="boardBtn" class="icon-btn" type="button" aria-label="순위표" title="순위표">🏆</button>
+        <button id="themeBtn" class="icon-btn" type="button" aria-label="다크 모드 전환" title="다크 모드 전환">🌙</button>
+      </div>
     </header>
 
     <nav id="levels" class="levels" aria-label="난이도">
@@ -62,6 +66,35 @@
     <div class="dialog-actions">
       <button id="dNew" class="primary" type="button">새 게임</button>
       <button id="dClose" type="button">닫기</button>
+    </div>
+  </dialog>
+
+  <dialog id="nickDialog">
+    <form id="nickForm">
+      <h2>닉네임을 입력하세요</h2>
+      <p class="sub">순위표에 표시될 이름이에요. (최대 12자)</p>
+      <input id="nickInput" type="text" maxlength="12" autocomplete="off" required>
+      <div class="dialog-actions">
+        <button class="primary" type="submit">확인</button>
+        <button id="nickCancel" type="button">취소</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="boardDialog" class="wide">
+    <h2>🏆 순위표</h2>
+    <nav id="boardTabs" class="levels" aria-label="순위표 난이도">
+      <button type="button" data-level="-1">전체</button>
+      <button type="button" data-level="0">쉬움</button>
+      <button type="button" data-level="1">보통</button>
+      <button type="button" data-level="2">어려움</button>
+      <button type="button" data-level="3">전문가</button>
+      <button type="button" data-level="4">지옥</button>
+    </nav>
+    <div id="boardList" class="board-list"></div>
+    <p class="sub">순위는 이 기기(브라우저)에만 저장돼요.</p>
+    <div class="dialog-actions single">
+      <button id="boardClose" type="button">닫기</button>
     </div>
   </dialog>
 
