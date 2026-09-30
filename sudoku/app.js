@@ -38,6 +38,7 @@
     boardDialog: $('#boardDialog'),
     boardTabs: $('#boardTabs'),
     boardList: $('#boardList'),
+    boardNote: $('#boardNote'),
     boardClose: $('#boardClose'),
   };
 
@@ -64,7 +65,8 @@
   let nickRequired = false;                       // 첫 접속 닉네임 입력 중인지
   let startLevel = 0;
 
-  const MAX_PER_LEVEL = 30;
+  const MAX_PER_LEVEL = 30; // 이 기기에 백업으로 저장하는 난이도별 최대 개수
+  const MAX_SHOWN = 50;     // 순위표에 보여줄 최대 개수
   const NICK_MAX = 12;
 
   /* ---------- 테마 ---------- */
@@ -145,20 +147,18 @@
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   };
 
-  function renderBoard() {
-    el.boardTabs.querySelectorAll('button').forEach((b) => {
-      b.classList.toggle('active', Number(b.dataset.level) === boardFilter);
-    });
-
-    const rows = records.filter((r) => boardFilter < 0 || r.level === boardFilter).sort(compareRecords);
+  function showBoardMessage(text) {
     el.boardList.textContent = '';
-    if (!rows.length) {
-      const p = document.createElement('p');
-      p.className = 'empty';
-      p.textContent = '아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!';
-      el.boardList.appendChild(p);
-      return;
-    }
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = text;
+    el.boardList.appendChild(p);
+  }
+
+  function renderBoard(rows) {
+    rows = rows.slice().sort(compareRecords).slice(0, MAX_SHOWN);
+    if (!rows.length) return showBoardMessage('아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!');
+    el.boardList.textContent = '';
 
     const table = document.createElement('table');
     table.className = 'lb';
@@ -189,10 +189,35 @@
     el.boardList.appendChild(table);
   }
 
+  // 서버(Firestore)에서 순위를 불러온다. 실패하면 이 기기에 저장된 기록을 보여준다.
+  let boardSeq = 0;
+  async function loadBoard() {
+    const seq = ++boardSeq;
+    const level = boardFilter;
+    el.boardTabs.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', Number(b.dataset.level) === level);
+    });
+    showBoardMessage('불러오는 중...');
+    el.boardNote.textContent = '';
+
+    let rows, offline = false;
+    try {
+      rows = await Leaderboard.fetchTop(level);
+    } catch {
+      offline = true;
+      rows = records.filter((r) => level < 0 || r.level === level);
+    }
+    if (seq !== boardSeq) return; // 그 사이 다른 탭을 눌렀다면 무시
+    renderBoard(rows);
+    el.boardNote.textContent = offline
+      ? '서버에 연결하지 못해 이 기기에 저장된 기록만 보여요.'
+      : '모든 플레이어의 기록이에요.';
+  }
+
   function openBoard(filter = boardFilter) {
     boardFilter = filter;
-    renderBoard();
     el.boardDialog.showModal();
+    loadBoard();
   }
 
   // 메모 비트마스크(1<<n)를 3x3 작은 숫자로 그린다
@@ -347,17 +372,34 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = '순위표에 등록';
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const name = cleanNick(input.value);
       if (!name) return input.focus();
       setNick(name);
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const rank = addRecord({ id, nick: name, score, time, level, date: Date.now() });
+      btn.disabled = true;
+      input.disabled = true;
+      btn.textContent = '등록 중...';
+
+      const entry = { nick: name, score, time, level, date: Date.now() };
+      let id, rank = 0, saved = true;
+      try {
+        id = await Leaderboard.submit(entry);
+        try { // 등록한 난이도 안에서의 순위
+          const rows = (await Leaderboard.fetchTop(level)).sort(compareRecords);
+          rank = rows.findIndex((r) => r.id === id) + 1;
+        } catch { /* 순위 계산 실패는 무시 */ }
+      } catch {
+        saved = false;
+        id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        rank = 0;
+      }
+      const localRank = addRecord({ id, ...entry }); // 이 기기에도 백업 저장
       lastRecordId = id;
 
       const done = document.createElement('p');
       done.className = 'done';
-      done.textContent = `등록 완료! ${LEVEL_NAMES[level]} ${rank}위`;
+      if (!saved) done.textContent = `서버에 연결하지 못해 이 기기에만 저장했어요. (${LEVEL_NAMES[level]} ${localRank}위)`;
+      else done.textContent = rank ? `등록 완료! ${LEVEL_NAMES[level]} ${rank}위` : '등록 완료!';
       const view = document.createElement('button');
       view.type = 'button';
       view.textContent = '순위표 보기';
@@ -535,7 +577,7 @@
   el.boardClose.addEventListener('click', () => el.boardDialog.close());
   el.boardTabs.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-level]');
-    if (b) { boardFilter = Number(b.dataset.level); renderBoard(); }
+    if (b) { boardFilter = Number(b.dataset.level); loadBoard(); }
   });
   el.nickCancel.addEventListener('click', () => el.nickDialog.close());
   el.nickDialog.addEventListener('cancel', (e) => { if (nickRequired) e.preventDefault(); }); // 첫 입력은 Esc로 닫기 불가
